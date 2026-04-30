@@ -18,25 +18,24 @@ export default function App() {
   const [lenteAtiva, setLenteAtiva] = useState<string>('');
   const [sistemaIniciado, setSistemaIniciado] = useState<boolean>(false);
 
-  // Função disparada SOMENTE quando o usuário clica no botão (Exigência do iOS)
   const iniciarSistema = async () => {
+    if (!window.isSecureContext) {
+      alert(`Acesso bloqueado pela Apple.\nO Safari exige HTTPS para vídeo ao vivo.\n\nDigite manualmente na barra de endereços:\nhttps://${window.location.host}`);
+      return;
+    }
+
     try {
-      // 1. Pede permissão na marra (Isso força o Safari a mostrar o pop-up "Permitir Câmera")
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      
-      // 2. Com a permissão dada, o iOS agora nos deixa listar as lentes
       const devices = await Html5Qrcode.getCameras();
       
       if (devices && devices.length > 0) {
         setCameras(devices);
-        // Tenta pegar a última lente da lista (Câmera Principal Traseira no iOS)
         setLenteAtiva(devices[devices.length - 1].id);
         setSistemaIniciado(true);
       } else {
         alert("Nenhuma câmera encontrada neste dispositivo.");
       }
       
-      // Desliga a stream temporária
       stream.getTracks().forEach(track => track.stop());
     } catch (err) {
       console.error("Erro de permissão:", err);
@@ -44,7 +43,6 @@ export default function App() {
     }
   };
 
-  // Inicia e controla a leitura (Só roda depois que o botão for clicado)
   useEffect(() => {
     if (!sistemaIniciado || !lenteAtiva) return;
 
@@ -77,7 +75,8 @@ export default function App() {
           setTimeout(() => { ultimoCodigo = ""; }, 2000);
         }
       },
-      (error) => { /* Ignora erros de frame contínuos */ }
+      // CORREÇÃO AQUI: underline adicionado para o TS ignorar a variável e passar no build da Vercel
+      (_error) => { /* Ignora erros de frame contínuos */ }
     ).catch((err) => console.error("Erro ao iniciar câmera:", err));
 
     return () => {
@@ -94,7 +93,6 @@ export default function App() {
       <div className="w-full max-w-md bg-white p-4 rounded-lg shadow-md">
         <h1 className="text-xl font-bold mb-4 text-center text-gray-800">Leitor de Enxoval</h1>
         
-        {/* TELA DE INÍCIO: Botão obrigatório para o iOS */}
         {!sistemaIniciado ? (
           <div className="text-center py-10 bg-gray-50 rounded border border-gray-200">
             <p className="text-sm text-gray-600 mb-4">Clique no botão abaixo para liberar a câmera no Safari.</p>
@@ -106,7 +104,6 @@ export default function App() {
             </button>
           </div>
         ) : (
-          /* TELA DO LEITOR (Só aparece após a permissão) */
           <>
             {cameras.length > 0 && (
               <div className="mb-4">
@@ -131,7 +128,6 @@ export default function App() {
           </>
         )}
 
-        {/* Resultados */}
         <div>
           <h2 className="font-semibold text-gray-700 border-b pb-1 mb-2 mt-4">Registros Locais:</h2>
           <ul className="space-y-2 max-h-64 overflow-y-auto">
